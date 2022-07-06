@@ -59,7 +59,7 @@ class FocalLoss(nn.Module):
             return loss
 
 
-def compute_loss(p, targets, model):  # predictions, targets, model
+def compute_loss(p, targets, model, reg_weight):  # predictions, targets, model
     device = targets.device
     #print(device)
     lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
@@ -121,7 +121,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     lcls *= h['cls'] * s
     bs = tobj.shape[0]  # batch size
 
-    loss = lbox + lobj + lcls
+    loss = reg_weight * lbox + lobj + lcls
     return loss * bs, torch.cat((lbox, lobj, lcls, loss)).detach()
 
 
