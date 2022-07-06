@@ -31,6 +31,7 @@ from utils.google_utils import attempt_download
 from utils.loss import compute_loss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +256,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     logger.info('Image sizes %g train, %g test\n'
                 'Using %g dataloader workers\nLogging results to %s\n'
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
+    total_iters = len(dataloader) * epochs
+    print('total iters: ', total_iters)
+    reg_weights = []
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
 
@@ -306,7 +310,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 if sf != 1:
                     ns = [math.ceil(x * sf / gs) * gs for x in imgs.shape[2:]]  # new shape (stretched to gs-multiple)
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
-            reg_weight = math.cos(2 * math.pi * (epoch * pbar.len + i) / (epochs * pbar.len)) * 0.5 + 1
+            reg_weight = math.cos(2 * math.pi * (epoch * len(dataloader) + i) / total_iters) * 0.5 + 1
+            if i % 100 == 0:
+                reg_weights += [reg_weight]
             # Forward
             with amp.autocast(enabled=cuda):
                 pred = model(imgs)  # forward
@@ -453,6 +459,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
+    plt.plot(reg_weights)
+    plt.savefig('reg_weight.png')
 
     if rank in [-1, 0]:
         # Strip optimizers
