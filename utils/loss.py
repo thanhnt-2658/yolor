@@ -59,7 +59,7 @@ class FocalLoss(nn.Module):
             return loss
 
 
-def compute_loss(p, targets, model, reg_weight):  # predictions, targets, model
+def compute_loss(p, targets, model, reg_weight=1):  # predictions, targets, model
     device = targets.device
     #print(device)
     lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
